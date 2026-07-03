@@ -1,0 +1,6 @@
+[submodule "backend"]
+	path = backend
+	url = ../eval_cloud-backend.git
+[submodule "frontend"]
+	path = frontend
+	url = ../eval_cloud-frontend.git
