@@ -1,8 +1,4 @@
-"""Interface Streamlit de l'assistant documentaire RAG.
-
-Consomme l'API FastAPI (backend) : /upload, /index, /ask.
-L'URL du backend est lue depuis la variable d'environnement BACKEND_URL.
-"""
+"""Interface Streamlit de l'assistant documentaire RAG."""
 
 import os
 import requests
@@ -22,18 +18,84 @@ if "indexed" not in st.session_state:
 if "historique" not in st.session_state:
     st.session_state.historique = []
 
-# --- Barre laterale : chargement et indexation ---
+
+def get_documents():
+    """Récupère la liste des documents indexés via GET /documents."""
+    try:
+        resp = requests.get(f"{BACKEND_URL}/documents", timeout=10)
+        resp.raise_for_status()
+        return resp.json().get("documents", [])
+    except requests.RequestException:
+        return []
+
+
+def reset_index(filename=None):
+    """Réinitialise l'index complet ou un document précis."""
+    try:
+        body = {"filename": filename} if filename else {}
+        resp = requests.post(f"{BACKEND_URL}/reset", json=body, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException:
+        return None
+
+
+# --- Barre laterale ---
 with st.sidebar:
     st.header("1. Document")
 
-    if st.button("📂 Utiliser le corpus fourni"):
-        st.session_state.filename = "corpus_de_travail.txt"
-        st.session_state.indexed = False
-        st.success("Fichier sélectionné : corpus_de_travail.txt")
+    # Récupérer les documents disponibles dans ChromaDB
+    documents = get_documents()
+
+    if documents:
+        st.markdown("**Documents disponibles :**")
+        noms = [d["filename"] for d in documents]
+        choix = st.selectbox("Sélectionner un document", noms)
+        if st.button("✅ Utiliser ce document"):
+            st.session_state.filename = choix
+            st.session_state.indexed = True
+            st.success(f"Document sélectionné : {choix}")
+
+        # Infos sur le document sélectionné
+        for d in documents:
+            if d["filename"] == choix:
+                st.caption(f"Passages indexés : {d['chunks_indexed']}")
+
+        st.divider()
+
+        # Reset
+        with st.expander("🗑️ Gérer l'index"):
+            if st.button("Supprimer ce document de l'index"):
+                result = reset_index(filename=choix)
+                if result:
+                    chunks = result.get("chunks_removed", 0)
+                    docs = result.get("documents_removed", 0)
+                    st.success(f"Document supprimé — {docs} document(s) et {chunks} passages retirés de l'index")
+                    st.session_state.filename = None
+                    st.session_state.indexed = False
+                    st.rerun()
+                else:
+                    st.error("Erreur lors de la suppression")
+
+            if st.button("⚠️ Réinitialiser tout l'index"):
+                result = reset_index()
+                if result:
+                    chunks = result.get("chunks_removed", 0)
+                    docs = result.get("documents_removed", 0)
+                    st.success(f"Index réinitialisé — {docs} document(s) et {chunks} passages supprimés")
+                    st.session_state.filename = None
+                    st.session_state.indexed = False
+                    st.rerun()
+                else:
+                    st.error("Erreur lors de la réinitialisation")
+    else:
+        st.info("Aucun document indexé pour l'instant.")
 
     st.divider()
 
-    uploaded = st.file_uploader("Ou charger un document (.txt)", type=["txt", "pdf"])
+    # Upload d'un nouveau document
+    st.markdown("**Ajouter un document :**")
+    uploaded = st.file_uploader("Charger un document (.txt)", type=["txt", "pdf"])
 
     if st.button("Envoyer le document", disabled=uploaded is None):
         with st.spinner("Envoi du document..."):
@@ -44,6 +106,7 @@ with st.sidebar:
                 st.session_state.filename = uploaded.name
                 st.session_state.indexed = False
                 st.success(f"Document envoyé : {uploaded.name}")
+                st.rerun()
             except requests.RequestException as exc:
                 st.error(f"Erreur lors de l'envoi : {exc}")
 
@@ -66,6 +129,7 @@ with st.sidebar:
             progress.progress(100, text="Indexation terminée !")
             st.session_state.indexed = True
             st.success("✅ Indexation terminée !")
+            st.rerun()
         except requests.RequestException as exc:
             progress.empty()
             st.error(f"Erreur lors de l'indexation : {exc}")
@@ -73,7 +137,6 @@ with st.sidebar:
     if st.session_state.indexed:
         st.success("✅ Document indexé — vous pouvez poser des questions")
 
-    # Historique dans la sidebar
     st.divider()
     st.header("📋 Historique")
     if st.session_state.historique:
@@ -86,11 +149,15 @@ with st.sidebar:
     else:
         st.caption("Aucune question posée pour l'instant.")
 
-# --- Zone principale : question / reponse ---
+# --- Zone principale ---
 st.header("3. Poser une question")
 
+# Le warning ne s'affiche que si nécessaire
 if not st.session_state.indexed:
-    st.warning("⚠️ Veuillez d'abord charger et indexer un document.")
+    if not st.session_state.filename:
+        st.warning("⚠️ Veuillez d'abord sélectionner ou charger un document.")
+    else:
+        st.warning("⚠️ Veuillez lancer l'indexation avant de poser une question.")
 
 question = st.text_input(
     "Votre question",
@@ -109,15 +176,12 @@ if st.button("Interroger", type="primary", disabled=not question or not st.sessi
             resp.raise_for_status()
             data = resp.json()
 
-            # Réponse
             st.subheader("Réponse")
             st.write(data.get("answer", ""))
 
-            # Compteur de passages
             sources = data.get("sources", [])
             st.info(f"🔍 {len(sources)} passage(s) trouvé(s) dans le document")
 
-            # Sources
             st.subheader("Sources")
             if sources:
                 for s in sources:
@@ -129,7 +193,6 @@ if st.button("Interroger", type="primary", disabled=not question or not st.sessi
             else:
                 st.info("Aucune source trouvée.")
 
-            # Ajout à l'historique
             st.session_state.historique.append({
                 "question": question,
                 "answer": data.get("answer", "")
