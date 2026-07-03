@@ -1,0 +1,30 @@
+##############################################################################
+# Override : Ollama tourne NATIVEMENT sur l'hote (hors Docker).
+#
+# Le backend joint l'Ollama de l'hote via OLLAMA_BASE_URL
+# (voir .env.host-ollama.example). Les services ollama / ollama-pull embarques
+# sont ranges dans un profil "bundled-ollama" : ils ne demarrent donc PAS par
+# defaut, et le backend n'en depend plus.
+#
+# Lancement :
+#   cp .env.host-ollama.example .env
+#   docker compose -f docker-compose.yml -f docker-compose.host-ollama.yml up --build
+##############################################################################
+
+services:
+  backend:
+    # Le tag !override REMPLACE le depends_on de base (sinon Compose fusionne
+    # les deux et le service `ollama` resterait une dependance).
+    depends_on: !override
+      minio:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+
+  # Range les services LLM embarques dans un profil : ils ne demarrent que si
+  # l'on passe explicitement --profile bundled-ollama (donc jamais par defaut).
+  ollama:
+    profiles: ["bundled-ollama"]
+
+  ollama-pull:
+    profiles: ["bundled-ollama"]

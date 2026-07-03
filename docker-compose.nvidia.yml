@@ -1,0 +1,25 @@
+##############################################################################
+# Override GPU NVIDIA pour le service Ollama.
+#
+# Prerequis :
+#   - Driver NVIDIA a jour sur l'hote
+#   - NVIDIA Container Toolkit installe
+#       Linux  : https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/
+#       Windows: Docker Desktop + WSL2 + driver CUDA (le toolkit est integre)
+#
+# Lancement :
+#   docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up --build
+#
+# Verification (dans le container) :
+#   docker exec rag-ollama nvidia-smi
+##############################################################################
+
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all          # ou un entier, ex. 1
+              capabilities: [gpu]

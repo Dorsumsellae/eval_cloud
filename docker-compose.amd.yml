@@ -1,0 +1,27 @@
+##############################################################################
+# Override GPU AMD (ROCm) pour le service Ollama.
+#
+# /!\ LINUX UNIQUEMENT. ROCm n'est pas expose dans Docker Desktop / WSL2 sous
+#     Windows : sur Windows, installe Ollama nativement pour utiliser un GPU AMD.
+#
+# Prerequis :
+#   - GPU AMD supporte par ROCm (voir la liste de compatibilite AMD)
+#   - Pilotes ROCm installes sur l'hote (acces a /dev/kfd et /dev/dri)
+#
+# Lancement :
+#   docker compose -f docker-compose.yml -f docker-compose.amd.yml up --build
+#
+# Verification (dans le container) :
+#   docker exec rag-ollama rocminfo
+##############################################################################
+
+services:
+  ollama:
+    # Image dediee ROCm (differente de l'image CPU/NVIDIA par defaut)
+    image: ollama/ollama:rocm
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+      - render

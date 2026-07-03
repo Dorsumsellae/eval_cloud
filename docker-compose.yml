@@ -75,6 +75,11 @@ services:
 
   # --------------------------------------------------------------------------
   # Serveur LLM local
+  #
+  # Par defaut : execution CPU (fonctionne sur toutes les machines).
+  # Pour activer un GPU, ajouter le fichier d'override correspondant :
+  #   NVIDIA : docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up
+  #   AMD    : docker compose -f docker-compose.yml -f docker-compose.amd.yml up  (Linux uniquement)
   # --------------------------------------------------------------------------
   ollama:
     image: ollama/ollama:latest
@@ -124,7 +129,7 @@ services:
       CHROMA_PORT: "8000"
       CHROMA_COLLECTION: ${CHROMA_COLLECTION:-rag_documents}
       # Ollama
-      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
       # Embeddings
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
@@ -154,7 +159,7 @@ services:
     ports:
       - "8501:8501"
     environment:
-      BACKEND_URL: http://backend:8000
+      BACKEND_URL: http://rag-backend:8000
     depends_on:
       - backend
     networks:

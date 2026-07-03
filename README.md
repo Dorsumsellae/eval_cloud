@@ -127,6 +127,36 @@ modèle `qwen2.5:0.5b` (cela peut prendre quelques minutes).
 | API FastAPI (docs) | http://localhost:8000/docs |
 | Console MinIO | http://localhost:9001 |
 
+#### Accélération GPU (selon le matériel)
+
+Par défaut, Ollama tourne en **CPU** (fonctionne partout). Pour exploiter un GPU,
+on ajoute un fichier d'override au lancement selon la machine :
+
+| Matériel | Commande |
+|----------|----------|
+| **CPU** (défaut) | `docker compose up --build` |
+| **GPU NVIDIA** (Linux ou Windows/WSL2) | `docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up --build` |
+| **GPU AMD / ROCm** (Linux **uniquement**) | `docker compose -f docker-compose.yml -f docker-compose.amd.yml up --build` |
+| **Ollama natif sur l'hôte** (ex. GPU AMD sous Windows) | voir ci-dessous |
+
+- **NVIDIA** nécessite le *NVIDIA Container Toolkit* sur l'hôte. Vérification :
+  `docker exec rag-ollama nvidia-smi`.
+- **AMD/ROCm** utilise l'image `ollama/ollama:rocm` et n'est **pas** disponible dans
+  Docker Desktop / WSL2 sous Windows (ROCm y est inaccessible). Vérification :
+  `docker exec rag-ollama rocminfo`.
+- **Ollama natif sur l'hôte** : le backend (en container) se connecte à un Ollama
+  installé directement sur la machine — seule option pour un **GPU AMD sous Windows**.
+  Ollama doit écouter sur `0.0.0.0` (variable d'hôte `OLLAMA_HOST=0.0.0.0`) :
+
+  ```bash
+  cp .env.host-ollama.example .env
+  docker compose -f docker-compose.yml -f docker-compose.host-ollama.yml up --build
+  ```
+
+  Cet override range les services `ollama` / `ollama-pull` embarqués dans un profil
+  et pointe `OLLAMA_BASE_URL` vers `http://host.docker.internal:11434`
+  (voir les prérequis détaillés dans `.env.host-ollama.example`).
+
 ### Option B — Lancement local (sans Docker)
 
 Voir les scripts dans [`scripts/`](scripts/) et les `requirements.txt` de chaque
