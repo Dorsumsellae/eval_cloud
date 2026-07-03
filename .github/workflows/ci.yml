@@ -2,30 +2,28 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
-  tests:
-    name: Tests backend
+  test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
 
-      - name: Installation de Python
+      - name: Installer Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
-      - name: Installation des dependances
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Installer les dépendances (subset léger pour la CI)
+        run: pip install -r requirements-ci.txt
 
-      - name: Execution des tests
-        working-directory: backend
-        run: pytest -v
+      - name: Lancer les tests unitaires
+        run: pytest tests/ -v
+
+      - name: Vérifier que le backend s'importe correctement
+        run: python -c "from backend.main import app; print('Import backend OK')"
