@@ -19,19 +19,20 @@ if "filename" not in st.session_state:
     st.session_state.filename = None
 if "indexed" not in st.session_state:
     st.session_state.indexed = False
+if "historique" not in st.session_state:
+    st.session_state.historique = []
 
 # --- Barre laterale : chargement et indexation ---
 with st.sidebar:
     st.header("1. Document")
 
-    # Option 1 : utiliser le fichier par défaut
     if st.button("📂 Utiliser le corpus fourni"):
         st.session_state.filename = "corpus_de_travail.txt"
+        st.session_state.indexed = False
         st.success("Fichier sélectionné : corpus_de_travail.txt")
 
     st.divider()
 
-    # Option 2 : uploader un fichier
     uploaded = st.file_uploader("Ou charger un document (.txt)", type=["txt", "pdf"])
 
     if st.button("Envoyer le document", disabled=uploaded is None):
@@ -52,21 +53,38 @@ with st.sidebar:
         st.info(f"Fichier actuel : {st.session_state.filename}")
 
     if st.button("Lancer l'indexation", disabled=st.session_state.filename is None):
-        with st.spinner("Indexation en cours... (peut prendre quelques secondes)"):
-            try:
-                resp = requests.post(
-                    f"{BACKEND_URL}/index",
-                    json={"filename": st.session_state.filename},
-                    timeout=120
-                )
-                resp.raise_for_status()
-                st.session_state.indexed = True
-                st.success("Indexation terminée !")
-            except requests.RequestException as exc:
-                st.error(f"Erreur lors de l'indexation : {exc}")
+        progress = st.progress(0, text="Démarrage de l'indexation...")
+        try:
+            progress.progress(20, text="Lecture du document...")
+            resp = requests.post(
+                f"{BACKEND_URL}/index",
+                json={"filename": st.session_state.filename},
+                timeout=120
+            )
+            progress.progress(60, text="Création des embeddings...")
+            resp.raise_for_status()
+            progress.progress(100, text="Indexation terminée !")
+            st.session_state.indexed = True
+            st.success("✅ Indexation terminée !")
+        except requests.RequestException as exc:
+            progress.empty()
+            st.error(f"Erreur lors de l'indexation : {exc}")
 
     if st.session_state.indexed:
         st.success("✅ Document indexé — vous pouvez poser des questions")
+
+    # Historique dans la sidebar
+    st.divider()
+    st.header("📋 Historique")
+    if st.session_state.historique:
+        if st.button("🗑️ Effacer l'historique"):
+            st.session_state.historique = []
+            st.rerun()
+        for i, item in enumerate(reversed(st.session_state.historique)):
+            with st.expander(f"Q{len(st.session_state.historique) - i} : {item['question'][:40]}..."):
+                st.write(item['answer'])
+    else:
+        st.caption("Aucune question posée pour l'instant.")
 
 # --- Zone principale : question / reponse ---
 st.header("3. Poser une question")
@@ -91,11 +109,16 @@ if st.button("Interroger", type="primary", disabled=not question or not st.sessi
             resp.raise_for_status()
             data = resp.json()
 
+            # Réponse
             st.subheader("Réponse")
             st.write(data.get("answer", ""))
 
-            st.subheader("Sources")
+            # Compteur de passages
             sources = data.get("sources", [])
+            st.info(f"🔍 {len(sources)} passage(s) trouvé(s) dans le document")
+
+            # Sources
+            st.subheader("Sources")
             if sources:
                 for s in sources:
                     with st.expander(
@@ -105,6 +128,12 @@ if st.button("Interroger", type="primary", disabled=not question or not st.sessi
                         st.write(s["excerpt"])
             else:
                 st.info("Aucune source trouvée.")
+
+            # Ajout à l'historique
+            st.session_state.historique.append({
+                "question": question,
+                "answer": data.get("answer", "")
+            })
 
         except requests.RequestException as exc:
             st.error(f"Erreur lors de l'appel au backend : {exc}")
