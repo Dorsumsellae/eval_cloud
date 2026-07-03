@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environnement / secrets
+.env
+
+# Donnees locales / caches
+chroma_store/
+.chroma/
+*.sqlite3
+data/uploads/
+models/
+.cache/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Sortie temporaire d'extraction PDF
+examen_final_Cloud.txt
