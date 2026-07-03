@@ -1,0 +1,16 @@
+# Sous-ensemble léger de requirements.txt, utilisé uniquement par GitHub Actions.
+#
+# Pourquoi un fichier séparé ? Les tests unitaires du projet (test_chunking,
+# test_prompt, test_health) n'exercent volontairement que du code sans
+# dépendance lourde : aucun modèle d'embeddings n'est chargé, aucune
+# connexion Ollama/Chroma/MinIO n'est établie (voir les imports paresseux
+# dans backend/rag/*.py). Installer torch + sentence-transformers en CI
+# ajouterait plusieurs minutes et plusieurs centaines de Mo pour rien.
+# En local, on installe requirements.txt en entier pour faire tourner
+# l'application complète.
+
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+langchain-text-splitters==0.2.2
+pytest==8.2.2
+httpx==0.27.0
