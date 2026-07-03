@@ -17,6 +17,8 @@ if "indexed" not in st.session_state:
     st.session_state.indexed = False
 if "historique" not in st.session_state:
     st.session_state.historique = []
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = None
 
 
 def get_documents():
@@ -27,6 +29,16 @@ def get_documents():
         return resp.json().get("documents", [])
     except requests.RequestException:
         return []
+
+
+def get_models():
+    """Récupère la liste des modèles disponibles via GET /models."""
+    try:
+        resp = requests.get(f"{BACKEND_URL}/models", timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException:
+        return None
 
 
 def reset_index(filename=None):
@@ -146,6 +158,25 @@ with st.sidebar:
         st.success("✅ Document indexé — vous pouvez poser des questions")
 
     st.divider()
+    st.header("🤖 Modèle")
+
+    models_data = get_models()
+    if models_data:
+        model_names = [m["name"] for m in models_data.get("models", [])]
+        default_model = models_data.get("default")
+        default_index = model_names.index(default_model) if default_model in model_names else 0
+
+        chosen_model = st.selectbox(
+            "Modèle Ollama",
+            options=model_names,
+            index=default_index,
+            help="Modèle utilisé pour générer la réponse. Défaut serveur si non modifié."
+        )
+        st.session_state.selected_model = chosen_model
+    else:
+        st.caption("⚠️ Impossible de récupérer la liste des modèles (serveur Ollama injoignable ?)")
+
+    st.divider()
     st.header("📋 Historique")
     if st.session_state.historique:
         if st.button("🗑️ Effacer l'historique"):
@@ -175,9 +206,13 @@ question = st.text_input(
 if st.button("Interroger", type="primary", disabled=not question or not st.session_state.indexed):
     with st.spinner("Recherche et génération de la réponse..."):
         try:
+            payload = {"question": question}
+            if st.session_state.selected_model:
+                payload["model"] = st.session_state.selected_model
+
             resp = requests.post(
                 f"{BACKEND_URL}/ask",
-                json={"question": question},
+                json=payload,
                 timeout=120
             )
             resp.raise_for_status()
@@ -185,6 +220,10 @@ if st.button("Interroger", type="primary", disabled=not question or not st.sessi
 
             st.subheader("Réponse")
             st.write(data.get("answer", ""))
+
+            used_model = data.get("model")
+            if used_model:
+                st.caption(f"🤖 Modèle utilisé : {used_model}")
 
             sources = data.get("sources", [])
             st.info(f"🔍 {len(sources)} passage(s) trouvé(s) dans le document")
