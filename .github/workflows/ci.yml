@@ -32,3 +32,4 @@ jobs:
       - name: Vérifier que le backend s'importe correctement
         working-directory: backend
         run: python -c "from main import app; print('Import backend OK')"
+        
