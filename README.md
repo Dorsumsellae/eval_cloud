@@ -47,29 +47,65 @@ Document → Découpage → Embeddings → Base vectorielle → Recherche
 
 ## Arborescence
 
+Le projet est organisé en **3 dépôts git** : un dépôt parent (orchestration) qui
+référence `backend` et `frontend` comme **submodules git** (voir plus bas).
+
 ```
-eval_cloud/
+eval_cloud/                    # Dépôt parent (orchestration)
 ├── docker-compose.yml        # Orchestration des 5 services
 ├── .env.example              # Variables d'environnement (à copier en .env)
+├── .gitmodules               # Déclaration des submodules backend / frontend
 ├── data/
 │   └── corpus_de_travail.txt # Document source fourni
-├── backend/                  # API FastAPI + chaîne RAG (LangChain)
-│   ├── Dockerfile
+├── backend/                  # ⟶ submodule : eval_cloud-backend
+│   ├── Dockerfile            #   API FastAPI + chaîne RAG (LangChain)
 │   ├── requirements.txt
-│   ├── main.py               # Point d'entrée FastAPI
+│   ├── main.py               #   Point d'entrée FastAPI
 │   ├── app/
-│   │   ├── config.py         # Configuration (variables d'env)
-│   │   ├── api/routes.py     # Endpoints : /health /upload /index /ask
-│   │   ├── rag/              # chunking, embeddings, vectorstore, prompt, pipeline
-│   │   └── storage/          # client MinIO
-│   └── tests/                # tests unitaires (chunking, prompt, /health)
-├── frontend/                 # Interface Streamlit
-│   ├── Dockerfile
+│   │   ├── config.py         #   Configuration (variables d'env)
+│   │   ├── api/routes.py     #   Endpoints : /health /upload /index /ask
+│   │   ├── rag/              #   chunking, embeddings, vectorstore, prompt, pipeline
+│   │   └── storage/          #   client MinIO
+│   └── tests/                #   tests unitaires (chunking, prompt, /health)
+├── frontend/                 # ⟶ submodule : eval_cloud-frontend
+│   ├── Dockerfile            #   Interface Streamlit
 │   ├── requirements.txt
 │   └── app.py
-├── scripts/                  # scripts utilitaires (Ollama, dev local)
+├── scripts/                  # scripts utilitaires (Ollama, push submodules)
 └── .github/workflows/ci.yml  # CI GitHub Actions
 ```
+
+### Structure en submodules
+
+`backend/` et `frontend/` sont des dépôts GitHub **distincts**, référencés par le
+dépôt parent à un commit précis :
+
+| Dépôt | Rôle |
+| ----- | ---- |
+| `Dorsumsellae/eval_cloud` | Parent : orchestration (docker-compose, data, CI) |
+| `Dorsumsellae/eval_cloud-backend` | Submodule `backend/` (FastAPI + RAG) |
+| `Dorsumsellae/eval_cloud-frontend` | Submodule `frontend/` (Streamlit) |
+
+**Cloner le projet complet** (submodules inclus) :
+
+```bash
+git clone --recursive https://github.com/Dorsumsellae/eval_cloud.git
+# ou, après un clone simple :
+git submodule update --init --recursive
+```
+
+**Publier les submodules sur GitHub** (une fois `gh` installé et authentifié) :
+
+```bash
+bash scripts/push_submodules.sh
+```
+
+Ce script crée les dépôts `eval_cloud-backend` / `eval_cloud-frontend`, les pousse,
+puis pousse le commit de conversion du dépôt parent.
+
+> Workflow submodules : un changement dans `backend/` ou `frontend/` se commite
+> **dans le submodule** (`cd backend && git commit && git push`), puis le nouveau
+> pointeur se commite **dans le parent** (`git add backend && git commit`).
 
 ---
 
