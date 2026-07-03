@@ -1,0 +1,139 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.0.0">
+  <diagram id="architecture-page" name="Architecture systeme">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Assistant documentaire RAG — Architecture systeme" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;fontColor=#21295C;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="480" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="user" value="Navigateur&#10;(utilisateur)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#21295C;fontColor=#21295C;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="360" y="90" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="streamlit" value="Streamlit UI&#10;frontend/app.py&#10;port 8501" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C7293;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="340" y="210" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fastapi" value="FastAPI Backend&#10;backend/main.py&#10;port 8000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#065A82;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="340" y="340" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="minio" value="MinIO&#10;Stockage objet&#10;(document brut)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="480" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="chroma" value="ChromaDB&#10;Base vectorielle&#10;(passages + embeddings)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="480" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ollama" value="Ollama&#10;qwen2.5:0.5b&#10;(LLM local)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="620" y="480" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;fontColor=#21295C;fontSize=11;" edge="1" parent="1" source="user" target="streamlit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e1l" value="HTTP :8501" style="text;html=1;fontSize=11;align=center;fontColor=#21295C;" vertex="1" parent="1">
+          <mxGeometry x="430" y="175" width="90" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;" edge="1" parent="1" source="streamlit" target="fastapi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2l" value="REST : /upload /index /ask" style="text;html=1;fontSize=11;align=center;fontColor=#21295C;" vertex="1" parent="1">
+          <mxGeometry x="400" y="298" width="180" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#065A82;" edge="1" parent="1" source="fastapi" target="minio">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="170" y="415" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3l" value="upload / lecture document" style="text;html=1;fontSize=10;align=center;fontColor=#065A82;" vertex="1" parent="1">
+          <mxGeometry x="90" y="418" width="180" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#065A82;" edge="1" parent="1" source="fastapi" target="chroma">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4l" value="index / recherche passages" style="text;html=1;fontSize=10;align=center;fontColor=#065A82;" vertex="1" parent="1">
+          <mxGeometry x="350" y="418" width="180" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#065A82;" edge="1" parent="1" source="fastapi" target="ollama">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="710" y="415" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5l" value="génération réponse (prompt)" style="text;html=1;fontSize=10;align=center;fontColor=#065A82;" vertex="1" parent="1">
+          <mxGeometry x="610" y="418" width="200" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend" value="Environnement : GitHub Codespaces — MinIO via Docker Compose, ChromaDB persiste sur disque, Ollama tourne en local (CPU)." style="text;html=1;fontSize=11;fontStyle=2;align=center;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="180" y="620" width="480" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="pipeline-page" name="Pipeline RAG (etapes)">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="ptitle" value="Pipeline RAG — du document a la reponse" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;fontColor=#21295C;" vertex="1" parent="1">
+          <mxGeometry x="330" y="20" width="500" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s1" value="1. Document&#10;(.txt fourni)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#065A82;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="130" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="2. Decoupage en&#10;passages (chunks)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C7293;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="200" y="120" width="130" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="3. Embeddings&#10;(sentence-transformers)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C7293;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="360" y="120" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="4. Stockage&#10;base vectorielle (Chroma)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1C7293;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="530" y="120" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" value="5. Question utilisateur&#10;-&gt; embedding" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="710" y="120" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" value="6. Recherche top-k&#10;passages proches" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="890" y="120" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s7" value="7. Prompt enrichi&#10;(contexte + question)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B85042;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="890" y="230" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s8" value="8. LLM Ollama&#10;qwen2.5:0.5b" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B85042;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="710" y="230" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s9" value="9. Reponse&#10;+ sources affichees" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2C5F2D;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="530" y="230" width="150" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pe1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;" edge="1" parent="1" source="s1" target="s2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pe2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;" edge="1" parent="1" source="s2" target="s3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pe3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;" edge="1" parent="1" source="s3" target="s4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pe4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;" edge="1" parent="1" source="s4" target="s5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pe5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;" edge="1" parent="1" source="s5" target="s6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pe6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;" edge="1" parent="1" source="s6" target="s7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pe7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;" edge="1" parent="1" source="s7" target="s8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="pe8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#21295C;" edge="1" parent="1" source="s8" target="s9"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="pnote" value="Si aucun passage pertinent n'est trouve : reponse fixe &quot;Je ne trouve pas cette information dans le document fourni.&quot;" style="text;html=1;fontSize=11;fontStyle=2;align=center;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="330" y="340" width="500" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
