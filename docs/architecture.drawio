@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Claude" version="24.0.0">
   <diagram id="architecture-page" name="Architecture systeme">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1350" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -21,12 +21,12 @@
           <mxGeometry x="340" y="340" width="200" height="70" as="geometry" />
         </mxCell>
 
-        <mxCell id="minio" value="MinIO&#10;Stockage objet&#10;(document brut)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="80" y="480" width="180" height="80" as="geometry" />
+        <mxCell id="minio" value="MinIO&#10;Stockage objet&#10;(document brut)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="480" width="180" height="90" as="geometry" />
         </mxCell>
 
-        <mxCell id="chroma" value="ChromaDB&#10;Base vectorielle&#10;(passages + embeddings)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="340" y="480" width="200" height="80" as="geometry" />
+        <mxCell id="chroma" value="ChromaDB&#10;Base vectorielle&#10;(passages + embeddings)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="335" y="480" width="200" height="90" as="geometry" />
         </mxCell>
 
         <mxCell id="ollama" value="Ollama&#10;qwen2.5:0.5b&#10;(LLM local)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#21295C;strokeColor=#065A82;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
@@ -78,6 +78,44 @@
 
         <mxCell id="legend" value="Environnement : GitHub Codespaces — MinIO via Docker Compose, ChromaDB persiste sur disque, Ollama tourne en local (CPU)." style="text;html=1;fontSize=11;fontStyle=2;align=center;fontColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="180" y="620" width="480" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cicd-title" value="Versioning &amp; CI/CD" style="text;html=1;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;fontColor=#21295C;" vertex="1" parent="1">
+          <mxGeometry x="220" y="700" width="400" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="git" value="Git&#10;Depot eval_cloud&#10;(GitHub)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#5B5B5B;strokeColor=#191919;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="150" y="760" width="170" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cicd" value="CI/CD&#10;GitHub Actions&#10;(.github/workflows/ci.yml)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B85042;strokeColor=#21295C;fontColor=#FFFFFF;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="420" y="765" width="230" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e6" value="push / pull_request" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#191919;fontColor=#191919;fontSize=10;" edge="1" parent="1" source="git" target="cicd">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e7" value="installe deps + tests" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;strokeColor=#B85042;fontColor=#B85042;fontSize=10;exitX=1;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="cicd" target="fastapi">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="805" />
+              <mxPoint x="720" y="375" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="e8" value="build &amp; verifie l'UI" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;strokeColor=#B85042;fontColor=#B85042;fontSize=10;exitX=1;exitY=0.3;entryX=1;entryY=0.5;" edge="1" parent="1" source="cicd" target="streamlit">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="760" y="789" />
+              <mxPoint x="760" y="245" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="cicd-note" value="A chaque push/PR : checkout du code (avec sous-modules), installation des dependances, execution des tests unitaires, verification que le backend s'importe correctement." style="text;html=1;fontSize=10;fontStyle=2;align=center;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="150" y="860" width="500" height="45" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
