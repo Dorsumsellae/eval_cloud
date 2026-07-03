@@ -194,7 +194,29 @@ ollama pull qwen2.5:0.5b
 | `GET` | `/health` | Vérification de disponibilité |
 | `POST` | `/upload` | Envoi du document (stockage MinIO) |
 | `POST` | `/index` | Indexation du document dans ChromaDB |
+| `GET` | `/documents` | Liste des documents indexés (nom + nombre de passages) |
 | `POST` | `/ask` | Question → réponse + sources |
+
+### `GET /documents`
+
+Renvoie les documents actuellement indexés dans ChromaDB, regroupés par nom de
+fichier et triés par ordre alphabétique. Aucun paramètre. Si rien n'est indexé,
+la réponse est `200 OK` avec une liste vide (jamais une erreur).
+
+```json
+{
+  "documents": [
+    { "filename": "corpus_de_travail.txt", "chunks_indexed": 12 }
+  ],
+  "count": 1
+}
+```
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `documents[].filename` | `string` | Nom du document indexé |
+| `documents[].chunks_indexed` | `integer` | Nombre de passages (chunks) indexés pour ce document |
+| `count` | `integer` | Nombre de documents distincts (= `documents.length`) |
 
 ---
 
