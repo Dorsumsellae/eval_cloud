@@ -61,7 +61,7 @@ services:
   # Base vectorielle
   # --------------------------------------------------------------------------
   chromadb:
-    image: chromadb/chroma:latest
+    image: chromadb/chroma:0.5.23
     container_name: rag-chromadb
     ports:
       - "8001:8000"
