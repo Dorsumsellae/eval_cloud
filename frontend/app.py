@@ -44,7 +44,6 @@ def reset_index(filename=None):
 with st.sidebar:
     st.header("1. Document")
 
-    # Récupérer les documents disponibles dans ChromaDB
     documents = get_documents()
 
     if documents:
@@ -56,14 +55,12 @@ with st.sidebar:
             st.session_state.indexed = True
             st.success(f"Document sélectionné : {choix}")
 
-        # Infos sur le document sélectionné
         for d in documents:
             if d["filename"] == choix:
                 st.caption(f"Passages indexés : {d['chunks_indexed']}")
 
         st.divider()
 
-        # Reset
         with st.expander("🗑️ Gérer l'index"):
             if st.button("Supprimer ce document de l'index"):
                 result = reset_index(filename=choix)
@@ -93,7 +90,6 @@ with st.sidebar:
 
     st.divider()
 
-    # Upload d'un nouveau document
     st.markdown("**Ajouter un document :**")
     uploaded = st.file_uploader("Charger un document (.txt)", type=["txt", "pdf"])
 
@@ -115,20 +111,32 @@ with st.sidebar:
     if st.session_state.filename:
         st.info(f"Fichier actuel : {st.session_state.filename}")
 
+    strategy = st.radio(
+        "Stratégie de découpage :",
+        options=["fixed", "recursive"],
+        index=0,
+        help="fixed : découpage par taille fixe | recursive : découpage intelligent par paragraphes"
+    )
+
     if st.button("Lancer l'indexation", disabled=st.session_state.filename is None):
         progress = st.progress(0, text="Démarrage de l'indexation...")
         try:
             progress.progress(20, text="Lecture du document...")
             resp = requests.post(
                 f"{BACKEND_URL}/index",
-                json={"filename": st.session_state.filename},
+                json={
+                    "filename": st.session_state.filename,
+                    "strategy": strategy
+                },
                 timeout=120
             )
             progress.progress(60, text="Création des embeddings...")
             resp.raise_for_status()
             progress.progress(100, text="Indexation terminée !")
+            data = resp.json()
+            chunks = data.get("chunks_indexed", 0)
             st.session_state.indexed = True
-            st.success("✅ Indexation terminée !")
+            st.success(f"✅ Indexation terminée — {chunks} passages créés avec la stratégie '{strategy}'")
             st.rerun()
         except requests.RequestException as exc:
             progress.empty()
@@ -152,7 +160,6 @@ with st.sidebar:
 # --- Zone principale ---
 st.header("3. Poser une question")
 
-# Le warning ne s'affiche que si nécessaire
 if not st.session_state.indexed:
     if not st.session_state.filename:
         st.warning("⚠️ Veuillez d'abord sélectionner ou charger un document.")
