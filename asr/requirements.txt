@@ -1,0 +1,22 @@
+# Service ASR isole (WhisperX + pyannote).
+#
+# NB : torch / transformers y sont volontairement plus anciens que dans le backend
+# (whisperx epingle transformers 4.x). C'est precisement la raison d'etre de ce
+# conteneur separe : ne pas contaminer la stack RAG modernisee.
+
+# --- API ---
+fastapi==0.139.0
+uvicorn[standard]==0.50.0
+pydantic==2.13.4
+
+# --- Telechargement audio YouTube ---
+yt-dlp==2026.7.4
+
+# --- ASR + alignement mot-a-mot ---
+whisperx==3.8.6
+
+# --- Diarisation (locuteurs) ---
+# Modele pyannote gated : necessite HF_TOKEN au runtime + acceptation des
+# conditions sur huggingface.co. Sans token, la transcription est renvoyee
+# sans locuteurs (degradation gracieuse cote service).
+pyannote.audio==4.0.7
