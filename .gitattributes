@@ -1,0 +1,20 @@
+# Normalise les fins de ligne : LF dans le depot, conversion selon l'OS au
+# checkout. Supprime les avertissements CRLF/LF et les diffs parasites entre
+# plateformes (Windows/Linux/macOS).
+* text=auto
+
+# Scripts shell : toujours en LF (executes sous Linux et dans les conteneurs ;
+# des CRLF casseraient le shebang).
+*.sh text eol=lf
+
+# Fichiers binaires : aucune conversion de fins de ligne (evite toute corruption).
+*.pdf   binary
+*.pptx  binary
+*.ppt   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.zip   binary
+*.gz    binary
