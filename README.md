@@ -34,7 +34,7 @@ Document → Découpage → Embeddings → Base vectorielle → Recherche
 
 | Besoin | Outil |
 |--------|-------|
-| Interface utilisateur | **Streamlit** |
+| Interface utilisateur | **Next.js / React / MUI** (façon NotebookLM) |
 | Backend API | **FastAPI** |
 | Stockage du document brut | **MinIO** (S3-compatible) |
 | Base vectorielle | **ChromaDB** |
@@ -67,10 +67,12 @@ eval_cloud/                    # Dépôt parent (orchestration)
 │   │   ├── rag/              #   chunking, embeddings, vectorstore, prompt, pipeline
 │   │   └── storage/          #   client MinIO
 │   └── tests/                #   tests unitaires (chunking, prompt, /health)
-├── frontend/                 # ⟶ submodule : eval_cloud-frontend
-│   ├── Dockerfile            #   Interface Streamlit
-│   ├── requirements.txt
-│   └── app.py
+├── frontend/                 # ⟶ submodule : eval_cloud-frontend (Next.js)
+│   ├── Dockerfile            #   Interface Next.js (façon NotebookLM)
+│   ├── package.json
+│   ├── app/                  #   App Router (layout, page, providers)
+│   ├── components/           #   layout / sources / chat / studio
+│   ├── lib/ hooks/ stores/   #   client API, hooks Query, état Zustand
 ├── scripts/                  # scripts utilitaires (Ollama, push submodules)
 └── .github/workflows/ci.yml  # CI GitHub Actions
 ```
@@ -84,7 +86,7 @@ dépôt parent à un commit précis :
 | ----- | ---- |
 | `Dorsumsellae/eval_cloud` | Parent : orchestration (docker-compose, data, CI) |
 | `Dorsumsellae/eval_cloud-backend` | Submodule `backend/` (FastAPI + RAG) |
-| `Dorsumsellae/eval_cloud-frontend` | Submodule `frontend/` (Streamlit) |
+| `Dorsumsellae/eval_cloud-frontend` | Submodule `frontend/` (Next.js) |
 
 **Cloner le projet complet** (submodules inclus) :
 
@@ -123,9 +125,13 @@ modèle `qwen2.5:0.5b` (cela peut prendre quelques minutes).
 
 | Service | URL |
 |---------|-----|
-| Interface Streamlit | http://localhost:8501 |
+| Interface Next.js | http://localhost:3000 |
 | API FastAPI (docs) | http://localhost:8000/docs |
 | Console MinIO | http://localhost:9001 |
+
+> L'interface (client navigateur) appelle le backend via `NEXT_PUBLIC_API_BASE_URL`
+> (défaut `http://localhost:8000`, inliné au build du frontend). Le CORS du backend
+> est ouvert, l'appel cross-origin fonctionne donc directement.
 
 #### Accélération GPU (selon le matériel)
 
@@ -159,8 +165,10 @@ on ajoute un fichier d'override au lancement selon la machine :
 
 ### Option B — Lancement local (sans Docker)
 
-Voir les scripts dans [`scripts/`](scripts/) et les `requirements.txt` de chaque
-service. Il faut installer et lancer Ollama manuellement :
+Backend : `pip install -r backend/requirements.txt` puis, dans `backend/`,
+`uvicorn main:app --reload`. Frontend : `cd frontend && npm install && npm run dev`
+(sert l'interface sur http://localhost:3000). Il faut aussi installer et lancer
+Ollama manuellement :
 
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
@@ -172,12 +180,17 @@ ollama pull qwen2.5:0.5b
 
 ## Utilisation
 
-1. Ouvrir l'interface Streamlit.
-2. **Charger / sélectionner** le document (`corpus_de_travail.txt`).
-3. Lancer l'**indexation** (découpage → embeddings → ChromaDB).
-4. **Poser une question** en langage naturel.
-5. Lire la **réponse** et consulter les **sources** (nom du document, numéro de
-   passage, extrait, score de similarité).
+Interface **façon NotebookLM** en 3 panneaux : **Sources** (gauche), **Chat**
+(centre), **Studio** (droite).
+
+1. Ouvrir l'interface Next.js (http://localhost:3000).
+2. Choisir ou créer un **Notebook** (barre du haut).
+3. **Ajouter des sources** (panneau de gauche) : fichier (`.txt`, `.pdf`, `.md`,
+   `.srt`, `.vtt`) ou vidéo YouTube. L'indexation est automatique.
+4. Cocher éventuellement un **sous-ensemble de sources** pour cibler la recherche.
+5. **Discuter** dans le panneau central : la conversation garde la mémoire des
+   échanges, et les réponses citent les passages via des puces `[n]` cliquables
+   (extrait, locuteur, lien horodaté pour les vidéos).
 
 ### Exemples de questions
 
@@ -192,10 +205,81 @@ ollama pull qwen2.5:0.5b
 | Méthode | Endpoint | Rôle |
 |---------|----------|------|
 | `GET` | `/health` | Vérification de disponibilité |
-| `POST` | `/upload` | Envoi du document (stockage MinIO) |
-| `POST` | `/index` | Indexation du document dans ChromaDB |
-| `GET` | `/documents` | Liste des documents indexés (nom + nombre de passages) |
-| `POST` | `/ask` | Question → réponse + sources |
+| `POST` | `/upload` | Envoi du document (stockage MinIO), rangé par workspace |
+| `POST` | `/index` | Indexation (texte, PDF, ou **transcript horodaté**) |
+| `POST` | `/ingest/youtube` | Récupère les sous-titres d'une vidéo YouTube et les indexe |
+| `GET` | `/documents` | Liste des documents indexés d'un workspace (`?workspace=…`) |
+| `GET` | `/workspaces` | Liste des workspaces existants |
+| `POST` | `/ask` | Question → réponse + sources (cloisonnée ; sous-ensemble via `filenames`) |
+| `POST` | `/chat` | Conversation **multi-tours** → réponse + sources + citations `[n]` |
+| `POST` | `/reset` | Réinitialise un workspace (entier, ou un seul document) |
+
+### Transcripts & YouTube
+
+L'assistant gère les **transcripts horodatés**, en plus du texte et des PDF :
+
+- **Formats** : `.srt`, `.vtt`, et `.txt` au format `[HH:MM:SS] texte` (export type
+  YouTube). Le format est détecté automatiquement à l'indexation.
+- **Nettoyage** : retrait des annotations non verbales (`[rires]`, `[musique]`) et
+  des balises de sous-titrage (`<c>`, `<00:00:00.000>`), lignes fragmentées fusionnées.
+- **Découpage temporel** : les passages respectent les frontières de segments et
+  conservent leur instant (`start`/`end`), au lieu d'un découpage aveugle au caractère.
+- **Sources cliquables** : pour un transcript YouTube, chaque source renvoie
+  `start_seconds` et un `timecode_url` (`…&t=<secondes>s`) pointant vers l'instant
+  exact de la vidéo.
+
+Import direct depuis une URL (récupération automatique des sous-titres) :
+
+```bash
+curl -X POST http://localhost:8000/ingest/youtube \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://www.youtube.com/watch?v=VIDEO_ID", "workspace": "ma-video", "languages": ["fr", "en"]}'
+```
+
+> Contrairement au reste de la stack (offline), cet endpoint nécessite un **accès
+> réseau sortant** vers YouTube. On peut aussi charger un fichier `.srt`/`.vtt` via
+> `/upload` pour rester 100 % hors-ligne.
+
+#### Vidéos sans sous-titres → transcription audio (ASR)
+
+Quand une vidéo **n'a aucun sous-titre**, `/ingest/youtube` bascule automatiquement
+sur un **service ASR isolé** (`asr/`) qui télécharge l'audio (`yt-dlp`) et le
+transcrit avec **WhisperX** — avec **diarisation** (séparation des locuteurs) via
+pyannote. Chaque passage porte alors son locuteur (`SPEAKER_00`, …), exploité dans
+la recherche et l'affichage des sources.
+
+Ce service est **isolé dans son propre conteneur** car WhisperX épingle
+`torch`/`transformers` à des versions incompatibles avec la stack RAG : on évite
+ainsi de dégrader les embeddings. Il est **optionnel** (profil `asr`) car lourd :
+
+```bash
+# .env : décommenter ASR_SERVICE_URL=http://asr:8100  (+ HF_TOKEN pour la diarisation)
+docker compose --profile asr up --build          # ou -f ... -f docker-compose.host-ollama.yml
+```
+
+| Point | Détail |
+|-------|--------|
+| **Activation** | `ASR_SERVICE_URL` dans `.env` **et** profil `asr` au lancement |
+| **Diarisation** | nécessite `HF_TOKEN` (whisperx charge `pyannote/speaker-diarization-community-1` ; accepter ses conditions sur huggingface.co si demandé). Sans jeton : transcription **sans** locuteurs (dégradation gracieuse) |
+| **Langue** | Whisper détecte la langue parlée (= langue originale) |
+| **Locuteurs** | `num_speakers` optimise : `1` = mono-locuteur → diarisation **ignorée** (plus rapide) ; `>1` = contrainte passée à pyannote ; absent = détection auto |
+| **Perf** | lent sur CPU ; les vidéos longues peuvent dépasser le timeout HTTP (`ASR_TIMEOUT`) |
+
+### Workspaces
+
+Les documents sont **cloisonnés par _workspace_** (espace de travail) : une même
+collection ChromaDB, mais chaque passage porte une métadonnée `workspace` sur
+laquelle la recherche est filtrée. Concrètement :
+
+- un `/ask` ne remonte **que** les passages du workspace ciblé — jamais ceux d'un
+  autre espace (corrige un ancien comportement où la recherche était globale) ;
+- deux workspaces peuvent contenir un fichier de même nom sans collision
+  (clé MinIO `{workspace}/{filename}`, id ChromaDB `{workspace}:{filename}:{n}`) ;
+- `workspace` est optionnel partout : sans valeur, `DEFAULT_WORKSPACE` (défaut
+  `default`) est utilisé.
+
+Côté UI, un workspace est présenté comme un **Notebook** : le sélecteur est dans
+la barre du haut ; on en crée un nouveau en y ajoutant une première source.
 
 ### `GET /documents`
 
@@ -235,8 +319,10 @@ push : découpage en chunks, construction du prompt, endpoint `/health`.
 
 - Temps de réponse parfois long (petit modèle local).
 - Qualité imparfaite du modèle `qwen2.5:0.5b`.
-- Corpus limité à un seul document.
-- Pas d'authentification ni de monitoring avancé.
+- Cloisonnement des workspaces **logique** (métadonnée filtrée), pas physique :
+  pas d'authentification, un appelant peut cibler n'importe quel workspace.
+- Le `/reset` d'un workspace vide ChromaDB mais laisse les objets bruts dans MinIO.
+- Pas de monitoring avancé.
 - Version de démonstration, non destinée à la production.
 
 > **Principe respecté :** l'assistant répond à partir du document. S'il ne trouve

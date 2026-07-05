@@ -7,11 +7,11 @@
 #   - chromadb     : base vectorielle (stockage des embeddings)
 #   - ollama       : serveur LLM local (qwen2.5:0.5b)
 #   - ollama-pull  : job one-shot qui telecharge le modele
-#   - backend      : API FastAPI (chaine RAG : upload / index / ask)
-#   - frontend     : interface Streamlit
+#   - backend      : API FastAPI (chaine RAG : upload / index / ask / chat)
+#   - frontend     : interface Next.js (facon NotebookLM)
 #
 # Lancement :   docker compose up --build
-# Interface :   http://localhost:8501   (Streamlit)
+# Interface :   http://localhost:3000   (Next.js)
 # API docs  :   http://localhost:8000/docs   (FastAPI)
 # Console MinIO: http://localhost:9001
 ##############################################################################
@@ -61,7 +61,7 @@ services:
   # Base vectorielle
   # --------------------------------------------------------------------------
   chromadb:
-    image: chromadb/chroma:0.5.23
+    image: chromadb/chroma:1.5.9
     container_name: rag-chromadb
     ports:
       - "8001:8000"
@@ -137,6 +137,12 @@ services:
       CHUNK_SIZE: ${CHUNK_SIZE:-800}
       CHUNK_OVERLAP: ${CHUNK_OVERLAP:-120}
       TOP_K: ${TOP_K:-4}
+      DEFAULT_WORKSPACE: ${DEFAULT_WORKSPACE:-default}
+      # Service ASR (fallback transcription si video sans sous-titres). Vide par
+      # defaut : renseigner ASR_SERVICE_URL=http://asr:8100 dans .env ET lancer le
+      # profil 'asr' (docker compose --profile asr up) pour l'activer.
+      ASR_SERVICE_URL: ${ASR_SERVICE_URL:-}
+      ASR_TIMEOUT: ${ASR_TIMEOUT:-900}
     volumes:
       - ./data:/app/data:ro
       - hf_cache:/root/.cache/huggingface
@@ -151,15 +157,45 @@ services:
       - rag-net
 
   # --------------------------------------------------------------------------
-  # Frontend (Streamlit)
+  # Service ASR isole (WhisperX + pyannote) : transcription des videos sans
+  # sous-titres. Profil 'asr' : ne demarre QUE si demande explicitement, car
+  # l'image est lourde (torch/pyannote) et la diarisation exige un HF_TOKEN.
+  #   Activation : ASR_SERVICE_URL=http://asr:8100 dans .env, puis
+  #                docker compose --profile asr up --build
+  # --------------------------------------------------------------------------
+  asr:
+    build: ./asr
+    container_name: rag-asr
+    profiles: ["asr"]
+    ports:
+      - "8100:8100"
+    environment:
+      ASR_MODEL: ${ASR_MODEL:-small}
+      ASR_DEVICE: ${ASR_DEVICE:-cpu}
+      ASR_COMPUTE_TYPE: ${ASR_COMPUTE_TYPE:-int8}
+      # Jeton Hugging Face pour la diarisation pyannote (modele gated). Sans lui,
+      # la transcription est renvoyee sans locuteurs.
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - asr_cache:/root/.cache
+    networks:
+      - rag-net
+
+  # --------------------------------------------------------------------------
+  # Frontend (Next.js, interface facon NotebookLM)
+  #
+  # NB : l'URL du backend est appelee depuis le NAVIGATEUR (pas le reseau Docker).
+  # Elle est inlinee au BUILD (prefixe NEXT_PUBLIC_) -> passee en build arg, et
+  # doit pointer vers le port publie du backend : http://localhost:8000.
   # --------------------------------------------------------------------------
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
     container_name: rag-frontend
     ports:
-      - "8501:8501"
-    environment:
-      BACKEND_URL: http://rag-backend:8000
+      - "3000:3000"
     depends_on:
       - backend
     networks:
@@ -170,6 +206,7 @@ volumes:
   chroma_data:
   ollama_data:
   hf_cache:
+  asr_cache:   # cache des modeles Whisper/pyannote du service ASR
 
 networks:
   rag-net:
