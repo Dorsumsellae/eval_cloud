@@ -13,6 +13,12 @@
 
 services:
   backend:
+    # Rend `host.docker.internal` joignable en IPv4 (gateway de l'hote). Sans cela,
+    # sur certains setups Docker Desktop, ce nom resout vers une adresse IPv6 non
+    # routable depuis le reseau (IPv4) du container -> "Network is unreachable".
+    # Fonctionne aussi bien sur Docker Desktop (Win/macOS) que Docker natif Linux.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Le tag !override REMPLACE le depends_on de base (sinon Compose fusionne
     # les deux et le service `ollama` resterait une dependance).
     depends_on: !override
@@ -20,6 +26,8 @@ services:
         condition: service_healthy
       chromadb:
         condition: service_started
+      postgres:
+        condition: service_healthy
 
   # Range les services LLM embarques dans un profil : ils ne demarrent que si
   # l'on passe explicitement --profile bundled-ollama (donc jamais par defaut).

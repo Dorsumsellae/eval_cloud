@@ -5,6 +5,7 @@
 #   - minio        : stockage objet du document brut (S3-compatible)
 #   - createbucket : job one-shot qui cree le bucket au demarrage
 #   - chromadb     : base vectorielle (stockage des embeddings)
+#   - postgres     : base applicative (notebooks, conversations, notes)
 #   - ollama       : serveur LLM local (qwen2.5:0.5b)
 #   - ollama-pull  : job one-shot qui telecharge le modele
 #   - backend      : API FastAPI (chaine RAG : upload / index / ask / chat)
@@ -110,6 +111,28 @@ services:
       - rag-net
 
   # --------------------------------------------------------------------------
+  # Base de donnees applicative (notebooks, conversations, notes)
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: rag-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rag}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag}
+      POSTGRES_DB: ${POSTGRES_DB:-rag}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag} -d ${POSTGRES_DB:-rag}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rag-net
+
+  # --------------------------------------------------------------------------
   # Backend API (FastAPI + LangChain)
   # --------------------------------------------------------------------------
   backend:
@@ -138,6 +161,8 @@ services:
       CHUNK_OVERLAP: ${CHUNK_OVERLAP:-120}
       TOP_K: ${TOP_K:-4}
       DEFAULT_WORKSPACE: ${DEFAULT_WORKSPACE:-default}
+      # Base de donnees applicative (notebooks, conversations, notes)
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://rag:rag@postgres:5432/rag}
       # Service ASR (fallback transcription si video sans sous-titres). Vide par
       # defaut : renseigner ASR_SERVICE_URL=http://asr:8100 dans .env ET lancer le
       # profil 'asr' (docker compose --profile asr up) pour l'activer.
@@ -153,6 +178,8 @@ services:
         condition: service_started
       ollama:
         condition: service_started
+      postgres:
+        condition: service_healthy
     networks:
       - rag-net
 
@@ -206,6 +233,7 @@ volumes:
   chroma_data:
   ollama_data:
   hf_cache:
+  pg_data:     # donnees Postgres (notebooks, conversations, notes)
   asr_cache:   # cache des modeles Whisper/pyannote du service ASR
 
 networks:
