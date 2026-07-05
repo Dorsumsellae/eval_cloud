@@ -40,7 +40,8 @@ Document → Découpage → Embeddings → Base vectorielle → Recherche
 | Base vectorielle | **ChromaDB** |
 | Orchestration RAG | **LangChain** |
 | Modèle d'embeddings | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` |
-| LLM local léger | **Ollama** — `qwen2.5:0.5b` |
+| LLM local | **Ollama** — `gemma3` (~4B) |
+| Retrieval avancé | Hybrid (dense + **BM25**/RRF) · **MMR** · **reranking** cross-encoder · reorder |
 | CI | **GitHub Actions** |
 
 ---
@@ -121,7 +122,7 @@ docker compose up --build
 ```
 
 Au premier démarrage, le service `ollama-pull` télécharge automatiquement le
-modèle `qwen2.5:0.5b` (cela peut prendre quelques minutes).
+modèle `gemma3` (~3 Go ; cela peut prendre plusieurs minutes).
 
 | Service | URL |
 |---------|-----|
@@ -173,7 +174,7 @@ Ollama manuellement :
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
 ollama serve
-ollama pull qwen2.5:0.5b
+ollama pull gemma3
 ```
 
 ---
@@ -318,7 +319,9 @@ push : découpage en chunks, construction du prompt, endpoint `/health`.
 ## Limites connues
 
 - Temps de réponse parfois long (petit modèle local).
-- Qualité imparfaite du modèle `qwen2.5:0.5b`.
+- Recherche hybride (BM25) : index reconstruit à la volée sur le périmètre — adapté
+  à un corpus petit/moyen, pas à un très gros volume.
+- Le reranker (cross-encoder, ~120 Mo) se télécharge au premier appel (mise en cache).
 - Cloisonnement des workspaces **logique** (métadonnée filtrée), pas physique :
   pas d'authentification, un appelant peut cibler n'importe quel workspace.
 - Le `/reset` d'un workspace vide ChromaDB mais laisse les objets bruts dans MinIO.

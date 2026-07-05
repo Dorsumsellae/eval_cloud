@@ -6,7 +6,7 @@
 #   - createbucket : job one-shot qui cree le bucket au demarrage
 #   - chromadb     : base vectorielle (stockage des embeddings)
 #   - postgres     : base applicative (notebooks, conversations, notes)
-#   - ollama       : serveur LLM local (qwen2.5:0.5b)
+#   - ollama       : serveur LLM local (gemma3)
 #   - ollama-pull  : job one-shot qui telecharge le modele
 #   - backend      : API FastAPI (chaine RAG : upload / index / ask / chat)
 #   - frontend     : interface Next.js (facon NotebookLM)
@@ -92,7 +92,7 @@ services:
     networks:
       - rag-net
 
-  # Job one-shot : telecharge le modele leger recommande
+  # Job one-shot : telecharge le modele recommande (gemma3, ~3 Go)
   ollama-pull:
     image: ollama/ollama:latest
     container_name: rag-ollama-pull
@@ -104,8 +104,8 @@ services:
       /bin/sh -c "
       echo 'Attente du serveur Ollama...';
       until ollama list >/dev/null 2>&1; do sleep 2; done;
-      ollama pull ${OLLAMA_MODEL:-qwen2.5:0.5b};
-      echo 'Modele ${OLLAMA_MODEL:-qwen2.5:0.5b} disponible';
+      ollama pull ${OLLAMA_MODEL:-gemma3:latest};
+      echo 'Modele ${OLLAMA_MODEL:-gemma3:latest} disponible';
       "
     networks:
       - rag-net
@@ -153,13 +153,13 @@ services:
       CHROMA_COLLECTION: ${CHROMA_COLLECTION:-rag_documents}
       # Ollama
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:latest}
       # Embeddings
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
       # Parametres RAG
       CHUNK_SIZE: ${CHUNK_SIZE:-800}
       CHUNK_OVERLAP: ${CHUNK_OVERLAP:-120}
-      TOP_K: ${TOP_K:-4}
+      TOP_K: ${TOP_K:-6}
       DEFAULT_WORKSPACE: ${DEFAULT_WORKSPACE:-default}
       # Base de donnees applicative (notebooks, conversations, notes)
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://rag:rag@postgres:5432/rag}
